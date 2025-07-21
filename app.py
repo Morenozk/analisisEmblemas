@@ -3,8 +3,6 @@ import cv2
 import numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-import base64  # <-- NUEVO: Para codificar la imagen
-import io      # <-- NUEVO: Para manejar la imagen en memoria
 
 # --- Configuración de la página de Streamlit ---
 st.set_page_config(
@@ -54,14 +52,6 @@ with col1:
         img_original = np.array(pil_image)
         img_bgr = cv2.cvtColor(img_original, cv2.COLOR_RGB2BGR)
 
-        # --- INICIO DEL WORKAROUND ---
-        # Convierte la imagen a Base64 para pasarla como una URL al lienzo
-        buffered = io.BytesIO()
-        pil_image.save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        background_image_url = f"data:image/png;base64,{img_str}"
-        # --- FIN DEL WORKAROUND ---
-
         CANVAS_WIDTH = 600
         escala = CANVAS_WIDTH / img_bgr.shape[1]
         canvas_height = int(img_bgr.shape[0] * escala)
@@ -72,8 +62,7 @@ with col1:
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=2,
             stroke_color="#00FF00",
-            # Se usa la URL Base64 en lugar del objeto de imagen
-            background_image=background_image_url, # <-- CAMBIO CLAVE
+            background_image=pil_image,  # Usamos el objeto de imagen directamente
             update_streamlit=True,
             width=CANVAS_WIDTH,
             height=canvas_height,
@@ -81,12 +70,10 @@ with col1:
             key="canvas",
         )
 
-# La lógica de procesamiento no cambia
-if uploaded_file is not None and canvas_result.json_data is not None and canvas_result.json_data["objects"]:
+if 'canvas_result' in locals() and canvas_result.json_data is not None and canvas_result.json_data["objects"]:
     puntos_canvas = canvas_result.json_data["objects"][0]["path"]
     puntos_reducidos = [tuple(p[1:]) for p in puntos_canvas]
     
-    # Recalcular la escala aquí para asegurar que sea accesible
     escala_calculada = CANVAS_WIDTH / img_bgr.shape[1]
     puntos_originales = [(int(x / escala_calculada), int(y / escala_calculada)) for x, y in puntos_reducidos]
 
